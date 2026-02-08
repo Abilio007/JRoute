@@ -10,43 +10,61 @@ import java.util.UUID;
 import Request.HttpRequest;
 import Response.HttpResponse;
 import Router.Router;
+import Template.HttpTemplate;
 
 public class HttpHandler {
 
-    private Socket client;
-    private Router router;
-    private BufferedReader in;
-    private final String id;
-    private Map<String, String> session;
+	private Socket client;
+	private Router router;
+	private BufferedReader in;
+	private final String id;
+	private Map<String, String> session;
 
-    public HttpHandler(Socket client, Router router) throws IOException {
-        this.client = client;
-        this.router = router;
+	public HttpHandler(Socket client, Router router) throws IOException {
+		this.client = client;
+		this.router = router;
 
-        this.in = new BufferedReader(
-                new InputStreamReader(client.getInputStream())
-        );
+		this.in = new BufferedReader(
+			new InputStreamReader(client.getInputStream())
+		);
 
-        this.id = UUID.randomUUID().toString();
-    }
+		this.id = UUID.randomUUID().toString();
+	}
 
-    public void handleClient() throws Exception {
+	public void handleClient() throws Exception {
 
-        StringBuilder raw = new StringBuilder();
-        String line;
+		StringBuilder headers = new StringBuilder();
+		String line;
+		int contentLength = 0;
 
-        while ((line = in.readLine()) != null && !line.isEmpty()) {
-            raw.append(line).append("\r\n");
-        }
+		// 1️⃣ Ler headers
+		while ((line = in.readLine()) != null && !line.isEmpty()) {
+			headers.append(line).append("\r\n");
 
-        HttpRequest req = new HttpRequest(raw.toString());
-        HttpResponse res = new HttpResponse(client.getOutputStream());
+			if (line.toLowerCase().startsWith("content-length:")) {
+				contentLength = Integer.parseInt(line.split(":")[1].trim());
+			}
+		}
 
-        router.handle(req, res);
-    }
+		// 2️⃣ Ler body (JSON, texto, etc.)
+		char[] bodyChars = new char[contentLength];
+		if (contentLength > 0) {
+			in.read(bodyChars, 0, contentLength);
+		}
 
-    public void close() throws IOException {
-        in.close();
-        client.close();
-    }
+		var body = HttpTemplate.bodyToMap(new String(bodyChars));
+
+		// 3️⃣ Criar request completo
+		HttpRequest req = new HttpRequest(headers.toString());
+		req.body = body;
+
+		HttpResponse res = new HttpResponse(client.getOutputStream());
+
+		router.handle(req, res);
+	}
+
+	public void close() throws IOException {
+		in.close();
+		client.close();
+	}
 }

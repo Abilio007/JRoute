@@ -7,108 +7,114 @@ import java.util.Map;
 
 public class HttpRequest {
 
-	public String method;
-	public String path;
-	public String body;
-	public Map<String, String> params = new HashMap<>();
-	public Map<String, String> pathParams = new HashMap<>();
+    public String method;
+    public String path;
+    public Map<String, Object> body;
 
-	public HttpRequest(String raw) {
+    public Map<String, String> headers = new HashMap<>();
+    public Map<String, String> params = new HashMap<>();
+    public Map<String, String> pathParams = new HashMap<>();
 
-		if (raw == null || raw.isEmpty()) {
-			throw new IllegalArgumentException("Requisição vazia");
-		}
+    public HttpRequest(String raw) {
 
-		String[] lines = raw.split("\r\n");
+        if (raw == null || raw.isEmpty()) {
+            throw new IllegalArgumentException("Requisição vazia");
+        }
 
-		if (lines.length == 0) {
-			throw new IllegalArgumentException("Nenhuma linha HTTP encontrada");
-		}
+        String[] lines = raw.split("\r\n");
 
-		// Linha: GET /path?x=1&y=2 HTTP/1.1
-		String[] firstLine = lines[0].split(" ");
+        if (lines.length == 0) {
+            throw new IllegalArgumentException("Nenhuma linha HTTP encontrada");
+        }
 
-		if (firstLine.length < 2) {
-			throw new IllegalArgumentException("Linha HTTP inválida: " + lines[0]);
-		}
+        // Linha: GET /path?x=1&y=2 HTTP/1.1
+        String[] firstLine = lines[0].split(" ");
 
-		method = firstLine[0];
+        if (firstLine.length < 2) {
+            throw new IllegalArgumentException("Linha HTTP inválida: " + lines[0]);
+        }
 
-		String fullPath = firstLine[1];
+        method = firstLine[0];
 
-		// separa path e query
-		String[] parts = fullPath.split("\\?", 2);
+        String fullPath = firstLine[1];
 
-		path = normalize(parts[0]);
+        // separa path e query
+        String[] parts = fullPath.split("\\?", 2);
+        path = normalize(parts[0]);
 
-		if (parts.length == 2) {
-			parseParams(parts[1]);
-		}
-	}
+        if (parts.length == 2) {
+            parseParams(parts[1]);
+        }
 
-	private void parseParams(String queryString) {
-		String[] pairs = queryString.split("&");
+        // parse headers
+        for (int i = 1; i < lines.length; i++) {
+            String line = lines[i];
+            if (!line.contains(":")) continue;
 
-		for (String pair : pairs) {
-			String[] kv = pair.split("=", 2);
+            String[] h = line.split(":", 2);
+            headers.put(
+                h[0].toLowerCase().trim(),
+                h[1].trim()
+            );
+        }
+    }
 
-			String key = decode(kv[0]);
-			String value = kv.length > 1 ? decode(kv[1]) : "";
+    /* ===================== PARAMS ===================== */
 
-			params.put(key, value);
-		}
-	}
+    private void parseParams(String queryString) {
+        String[] pairs = queryString.split("&");
 
-	public String get(String name) {
+        for (String pair : pairs) {
+            String[] kv = pair.split("=", 2);
 
-		if (pathParams.containsKey(name))
-			return pathParams.get(name);
+            String key = decode(kv[0]);
+            String value = kv.length > 1 ? decode(kv[1]) : "";
 
-		return params.get(name);
-	}
+            params.put(key, value);
+        }
+    }
 
-	public int getInt(String name) {
-		String value = get(name);
+    public String get(String name) {
+        if (pathParams.containsKey(name))
+            return pathParams.get(name);
+        return params.get(name);
+    }
 
-		if (value == null)
-			throw new IllegalArgumentException(
-				"Parâmetro '" + name + "' não encontrado"
-			);
+    public int getInt(String name) {
+        return Integer.parseInt(require(name));
+    }
 
-		try {
-			return Integer.parseInt(value);
-		} catch (NumberFormatException e) {
-			throw new IllegalArgumentException(
-				"Parâmetro '" + name + "' não é um int válido: " + value
-			);
-		}
-	}
+    public long getLong(String name) {
+        return Long.parseLong(require(name));
+    }
 
-	public long getLong(String name) {
-		String value = get(name);
+    private String require(String name) {
+        String value = get(name);
+        if (value == null)
+            throw new IllegalArgumentException(
+                "Parâmetro '" + name + "' não encontrado"
+            );
+        return value;
+    }
 
-		if (value == null)
-			throw new IllegalArgumentException(
-				"Parâmetro '" + name + "' não encontrado"
-			);
+    /* ===================== JSON ===================== */
 
-		try {
-			return Long.parseLong(value);
-		} catch (NumberFormatException e) {
-			throw new IllegalArgumentException(
-				"Parâmetro '" + name + "' não é um long válido: " + value
-			);
-		}
-	}
+    public boolean isJson() {
+        return headers
+            .getOrDefault("content-type", "")
+            .contains("application/json");
+    }
 
-	private String decode(String s) {
-		return URLDecoder.decode(s, StandardCharsets.UTF_8);
-	}
+    /* ===================== UTILS ===================== */
 
-	private String normalize(String p) {
-		if (!p.startsWith("/")) p = "/" + p;
-		if (p.endsWith("/") && p.length() > 1)
-			p = p.substring(0, p.length() - 1);
-		return p;
-	}
+    private String decode(String s) {
+        return URLDecoder.decode(s, StandardCharsets.UTF_8);
+    }
+
+    private String normalize(String p) {
+        if (!p.startsWith("/")) p = "/" + p;
+        if (p.endsWith("/") && p.length() > 1)
+            p = p.substring(0, p.length() - 1);
+        return p;
+    }
 }

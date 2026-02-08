@@ -32,6 +32,14 @@ public class Router {
     public void get(String pattern, RouteHandler handler) {
         routes.add(new Route("GET", pattern, handler));
     }
+    
+    // -----------------------
+    // Registrar POST
+    // -----------------------
+    public void post(String pattern, RouteHandler handler) {
+        routes.add(new Route("POST", pattern, handler));
+    }
+    
 
     public void get(RouteHandler handler, String pattern) {
         get(pattern, handler);

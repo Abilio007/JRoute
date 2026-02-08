@@ -120,4 +120,52 @@ public class HttpTemplate {
 		return Boolean.parseBoolean(s);
 	}
 
+
+	public static Map<String, Object> bodyToMap(String body) {
+
+		Map<String, Object> map = new java.util.HashMap<>();
+
+		if (body == null || body.isBlank())
+			return map;
+
+		body = body.trim();
+
+		if (body.startsWith("{"))
+			body = body.substring(1);
+		if (body.endsWith("}"))
+			body = body.substring(0, body.length() - 1);
+
+		String[] pairs = body.split(",");
+
+		for (String pair : pairs) {
+
+			String[] kv = pair.split(":", 2);
+			if (kv.length != 2) continue;
+
+			String key = kv[0].trim().replace("\"", "");
+			String value = kv[1].trim();
+
+			map.put(key, parseValue(value));
+		}
+
+		return map;
+	}
+
+	private static Object parseValue(String value) {
+
+		if (value.startsWith("\"") && value.endsWith("\""))
+			return value.substring(1, value.length() - 1);
+
+		if ("true".equalsIgnoreCase(value) || "false".equalsIgnoreCase(value))
+			return Boolean.parseBoolean(value);
+
+		try {
+			if (value.contains("."))
+				return Double.parseDouble(value);
+			return Long.parseLong(value);
+		} catch (Exception e) {
+			return value;
+		}
+	}
+
 }

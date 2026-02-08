@@ -8,41 +8,41 @@ import Handler.HttpHandler;
 import Router.Router;
 
 public class HttpServer {
-    private int port;
-    private static Router router;
-    
-    static{
-        router = new Router();
-    }
-    
-    public HttpServer(){
-        this.port = 8080;
-    }
+	private int port;
+	private static Router router;
 
-    public HttpServer(int port) {
-        this.port = port;    
-    }
-    
-    public Router getRouter(){
-        return router;
-    }
+	static {
+		router = new Router();
+	}
 
-    public void start() throws Exception {
-    ServerSocket server = new ServerSocket(port);
-    System.out.println("Servidor HTTP na porta " + port);
+	public HttpServer() {
+		this.port = 8080;
+	}
 
-    while (true) {
-        Socket client = server.accept();
+	public HttpServer(int port) {
+		this.port = port;
+	}
 
-        new Thread(() -> {
-            try {
-                HttpHandler handler = new HttpHandler(client, router);
-                handler.handleClient();
-                handler.close();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }).start();
-    }
-}
+	protected Router getRouter() {
+		return router;
+	}
+
+	protected void start() throws Exception {
+		ServerSocket server = new ServerSocket(port);
+		System.out.println("Servidor HTTP na porta " + port);
+
+		while (true) {
+			Socket client = server.accept();
+
+			new Thread(() -> {
+				try {
+					HttpHandler handler = new HttpHandler(client, router);
+					handler.handleClient();
+					handler.close();
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}).start();
+		}
+	}
 }
