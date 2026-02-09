@@ -13,7 +13,7 @@ public class HttpTemplate {
 	// -----------------------
 	public static String view(String filename) {
 		// A pasta views/ está no nível do projeto
-		File file = new File("template/views/" + filename);
+		File file = new File("templates/views/" + filename);
 		if (!file.exists()) {
 			return "<h1>Erro 404: Arquivo não encontrado</h1>";
 		}
